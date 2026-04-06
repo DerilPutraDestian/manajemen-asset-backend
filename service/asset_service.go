@@ -1,54 +1,34 @@
 package service
 
 import (
-	"asset-management/models"
+	models "asset-management/model"
 	"asset-management/repository"
-	"asset-management/utils"
-	"fmt"
 )
 
-type AssetService interface {
-	GetAll(page, limit int) ([]models.Asset, int64, error)
-	GetByID(id int) (models.Asset, error)
-	Create(asset *models.Asset) error
-	Update(id int, asset *models.Asset) error
-	Delete(id int) error
+type AssetService struct {
+	repo *repository.AssetRepository
 }
 
-type service struct {
-	repo repository.AssetRepository
+func NewAssetService(repo *repository.AssetRepository) *AssetService {
+	return &AssetService{repo: repo}
 }
 
-func NewAssetService(r repository.AssetRepository) AssetService {
-	return &service{r}
+func (s *AssetService) ListAssets(assetCode, search string, limit, offset int) ([]models.Asset, int64, error) {
+	return s.repo.GetAll(assetCode, search, limit, offset)
 }
 
-func (s *service) GetAll(page, limit int) ([]models.Asset, int64, error) {
-	return s.repo.FindAll(page, limit)
+func (s *AssetService) GetAsset(id string) (*models.Asset, error) {
+	return s.repo.GetByID(id)
 }
 
-func (s *service) GetByID(id int) (models.Asset, error) {
-	return s.repo.FindByID(id)
-}
-
-func (s *service) Create(asset *models.Asset) error {
-	path := fmt.Sprintf("qrcodes/%s.png", asset.Code)
-	if err := utils.GenerateQR(asset.Code, path); err != nil {
-		return err
-	}
-	asset.QRCode = path
+func (s *AssetService) CreateAsset(asset *models.Asset) error {
 	return s.repo.Create(asset)
 }
 
-func (s *service) Update(id int, asset *models.Asset) error {
-	existing, err := s.repo.FindByID(id)
-	if err != nil {
-		return err
-	}
-	asset.AssetID = existing.AssetID
+func (s *AssetService) UpdateAsset(asset *models.Asset) error {
 	return s.repo.Update(asset)
 }
 
-func (s *service) Delete(id int) error {
-	return s.repo.Delete(id)
+func (s *AssetService) DeleteAsset(asset *models.Asset) error {
+	return s.repo.Delete(asset)
 }

@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"asset-management/models"
+	models "asset-management/model"
 
 	"gorm.io/gorm"
 )

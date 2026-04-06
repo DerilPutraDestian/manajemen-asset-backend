@@ -1,68 +1,76 @@
 package handlers
 
 import (
-	"asset-management/models"
+	models "asset-management/model"
 	"asset-management/service"
-	"asset-management/utils"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type LoanHandler struct {
-	service service.LoanService
+	service *service.AssetLoanService
 }
 
-func NewLoanHandler(s service.LoanService) *LoanHandler {
-	return &LoanHandler{s}
+func NewLoanHandler(s *service.AssetLoanService) *LoanHandler {
+	return &LoanHandler{service: s}
 }
 
-// 🔥 BORROW
-func (h *LoanHandler) Borrow(c *fiber.Ctx) error {
-	var req models.LoanRequest
+func (h *LoanHandler) Index(c *fiber.Ctx) error {
 
-	// parse body
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "invalid request body",
-		})
-	}
+	limit, _ := strconv.Atoi(c.Query("limit", "10"))
+	offset, _ := strconv.Atoi(c.Query("offset", "0"))
 
-	// validate
-	if err := utils.Validate.Struct(req); err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": err.Error(),
-		})
-	}
-
-	// call service
-	if err := h.service.Borrow(req); err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": err.Error(),
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"message": "asset borrowed successfully",
-	})
-}
-
-// 🔥 RETURN
-func (h *LoanHandler) Return(c *fiber.Ctx) error {
-	assetID, err := strconv.Atoi(c.Params("asset_id"))
+	data, total, err := h.service.ListLoans("", "", limit, offset)
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "invalid asset id",
-		})
-	}
-
-	if err := h.service.Return(assetID); err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": err.Error(),
-		})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": err.Error()})
 	}
 
 	return c.JSON(fiber.Map{
-		"message": "asset returned successfully",
+		"status": "success",
+		"total":  total,
+		"data":   data,
 	})
+}
+
+func (h *LoanHandler) Store(c *fiber.Ctx) error {
+	var loan models.AssetLoan
+
+	if err := c.BodyParser(&loan); err != nil {
+		return c.Status(400).JSON(fiber.Map{"status": "error", "message": "invalid request"})
+	}
+
+	if err := h.service.CreateLoan(&loan); err != nil {
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": err.Error()})
+	}
+
+	return c.Status(201).JSON(fiber.Map{
+		"status": "success",
+		"data":   loan,
+	})
+}
+
+func (h *LoanHandler) Update(c *fiber.Ctx) error {
+	id := c.Params("id")
+	existing, err := h.service.GetLoanByID(id)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "Loan not found"})
+	}
+
+	var req models.AssetLoan
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"status": "error", "message": "invalid request"})
+	}
+
+	existing.AssetID = req.AssetID
+	existing.UserID = req.UserID
+	existing.LoanDate = req.LoanDate
+	existing.ReturnDate = req.ReturnDate
+	existing.Status = req.Status
+
+	if err := h.service.UpdateLoan(existing); err != nil {
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{"status": "success", "data": existing})
 }

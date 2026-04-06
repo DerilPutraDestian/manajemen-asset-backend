@@ -1,53 +1,60 @@
 package repository
 
 import (
-	"asset-management/models"
+	models "asset-management/model"
 
 	"gorm.io/gorm"
 )
 
-type CategoryRepository interface {
-	FindAll(page, limit int) ([]models.Category, int64, error)
-	FindByID(id int) (models.Category, error)
-	Create(category *models.Category) error
-	Update(category *models.Category) error
-	Delete(id int) error
-}
-
-type categoryRepo struct {
+type CategoryRepository struct {
 	db *gorm.DB
 }
 
-func NewCategoryRepository(db *gorm.DB) CategoryRepository {
-	return &categoryRepo{db}
+func NewCategoryRepository(db *gorm.DB) *CategoryRepository {
+	return &CategoryRepository{db: db}
 }
 
-func (r *categoryRepo) FindAll(page, limit int) ([]models.Category, int64, error) {
+func (r *CategoryRepository) GetAll(assetCode, search string, limit, offset int) ([]models.Category, int64, error) {
 	var data []models.Category
 	var total int64
 
-	offset := (page - 1) * limit
+	query := r.db.Model(&models.Category{})
 
-	r.db.Model(&models.Category{}).Count(&total)
-	err := r.db.Limit(limit).Offset(offset).Find(&data).Error
+	if assetCode != "" {
+		query = query.Where("asset_code = ?", assetCode)
+	}
+
+	if search != "" {
+		query = query.Where("name LIKE ?", "%"+search+"%")
+	}
+
+	err := query.Count(&total).
+		Limit(limit).
+		Offset(offset).
+		Find(&data).Error
 
 	return data, total, err
 }
 
-func (r *categoryRepo) FindByID(id int) (models.Category, error) {
+func (r *CategoryRepository) GetByID(id string) (*models.Category, error) {
 	var data models.Category
-	err := r.db.First(&data, id).Error
-	return data, err
+	err := r.db.First(&data, "id = ?", id).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &data, nil
 }
 
-func (r *categoryRepo) Create(category *models.Category) error {
+func (r *CategoryRepository) Create(category *models.Category) error {
 	return r.db.Create(category).Error
 }
 
-func (r *categoryRepo) Update(category *models.Category) error {
+func (r *CategoryRepository) Update(category *models.Category) error {
 	return r.db.Save(category).Error
 }
 
-func (r *categoryRepo) Delete(id int) error {
-	return r.db.Delete(&models.Category{}, id).Error
+func (r *CategoryRepository) Delete(category *models.Category) error {
+	return r.db.Delete(category).Error
 }

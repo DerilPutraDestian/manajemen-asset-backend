@@ -1,10 +1,11 @@
 package seeders
 
 import (
-	"asset-management/models"
+	models "asset-management/model"
 	"fmt"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -17,19 +18,25 @@ func Seed(db *gorm.DB) error {
 	category := models.Category{
 		Name: "Electronics",
 	}
-	if err := db.Create(&category).Error; err != nil {
+	// Gunakan FirstOrCreate agar seeder bisa dijalankan berkali-kali tanpa error duplicate
+	if err := db.Where(models.Category{Name: "Electronics"}).FirstOrCreate(&category).Error; err != nil {
 		return err
 	}
 
 	// ========================
-	// 2. EMPLOYEE
+	// 2. USER (DENGAN BCRYPT)
 	// ========================
-	employee := models.Employee{
-		Name:  "Deril",
-		Email: "deril@mail.com",
-		Phone: "08123456789",
+	// Password harus di-hash agar bisa login nanti
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.DefaultCost)
+
+	user := models.User{
+		Name:     "Deril Admin",
+		Email:    "deril@mail.com",
+		Password: string(hashedPassword),
+		Role:     "admin",
 	}
-	if err := db.Create(&employee).Error; err != nil {
+
+	if err := db.Where(models.User{Email: "deril@mail.com"}).FirstOrCreate(&user).Error; err != nil {
 		return err
 	}
 
@@ -38,23 +45,22 @@ func Seed(db *gorm.DB) error {
 	// ========================
 	assets := []models.Asset{
 		{
-			Code:       "AST001",
-			Name:       "Laptop Asus",
-			Status:     "available",
-			Condition:  "good",
-			CategoryID: category.CategoryID,
+			AssetCode:  "AST001",
+			Name:       "Laptop Asus ExpertBook",
+			Status:     "active",
+			CategoryID: category.ID,
 		},
 		{
-			Code:       "AST002",
-			Name:       "Printer Canon",
-			Status:     "maintenance",
-			Condition:  "fair",
-			CategoryID: category.CategoryID,
+			AssetCode:  "AST002",
+			Name:       "Printer Canon Pixma",
+			Status:     "active",
+			CategoryID: category.ID,
 		},
 	}
 
 	for i := range assets {
-		if err := db.Create(&assets[i]).Error; err != nil {
+		// Cek berdasarkan AssetCode agar tidak double saat seeding ulang
+		if err := db.Where(models.Asset{AssetCode: assets[i].AssetCode}).FirstOrCreate(&assets[i]).Error; err != nil {
 			return err
 		}
 	}
@@ -63,15 +69,35 @@ func Seed(db *gorm.DB) error {
 	// 4. ASSET LOAN
 	// ========================
 	loan := models.AssetLoan{
-		AssetID:    assets[0].AssetID,
-		EmployeeID: employee.EmployeeID,
-		LoanDate:   time.Now(),
-		Status:     "borrowed",
-	}
-	if err := db.Create(&loan).Error; err != nil {
-		return err
+		AssetID:  assets[0].ID,
+		UserID:   user.ID,
+		LoanDate: time.Now(),
+		Status:   "borrowed",
 	}
 
-	fmt.Println("Seeding success ✅")
+	// Hanya buat loan jika belum ada data loan untuk asset tersebut
+	var count int64
+	db.Model(&models.AssetLoan{}).Where("asset_id = ? AND status = ?", assets[0].ID, "borrowed").Count(&count)
+	if count == 0 {
+		if err := db.Create(&loan).Error; err != nil {
+			return err
+		}
+	}
+
+	now := time.Now()
+	maintenance := models.Maintenance{
+		AssetID:     assets[1].ID,
+		ReportedBy:  user.ID,
+		Description: "Tinta macet dan perlu pembersihan head",
+		Status:      "pending",
+		StartDate:   &now, // Mulai besok
+	}
+
+	db.Model(&models.Maintenance{}).Where("asset_id = ? AND status = ?", assets[1].ID, "pending").Count(&count)
+	if count == 0 {
+		db.Create(&maintenance)
+	}
+
+	fmt.Println("Seeding success!")
 	return nil
 }

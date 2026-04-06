@@ -1,98 +1,103 @@
 package handlers
 
 import (
-	"asset-management/models"
+	models "asset-management/model"
 	"asset-management/service"
-	"asset-management/utils"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type CategoryHandler struct {
-	service service.CategoryService
+	service *service.CategoryService
 }
 
-func NewCategoryHandler(s service.CategoryService) *CategoryHandler {
-	return &CategoryHandler{s}
+func NewCategoryHandler(s *service.CategoryService) *CategoryHandler {
+	return &CategoryHandler{service: s}
 }
 
-// GET ALL
-func (h *CategoryHandler) GetAll(c *fiber.Ctx) error {
-	page, _ := strconv.Atoi(c.Query("page", "1"))
+func (h *CategoryHandler) Index(c *fiber.Ctx) error {
+	id := c.Params("id")
+	search := c.Query("search", "")
 	limit, _ := strconv.Atoi(c.Query("limit", "10"))
+	offset, _ := strconv.Atoi(c.Query("offset", "0"))
 
-	data, total, err := h.service.GetAll(page, limit)
+	data, count, err := h.service.GetAll(id, search, limit, offset)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": err.Error()})
 	}
 
 	return c.JSON(fiber.Map{
-		"data":  data,
-		"total": total,
+		"status": "success",
+		"count":  count,
+		"data":   data,
 	})
 }
 
-// GET BY ID
-func (h *CategoryHandler) GetByID(c *fiber.Ctx) error {
-	id, _ := strconv.Atoi(c.Params("id"))
+func (h *CategoryHandler) Show(c *fiber.Ctx) error {
+	id := c.Params("id")
 
 	data, err := h.service.GetByID(id)
 	if err != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "Not found"})
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "Category not found"})
 	}
 
-	return c.JSON(data)
+	return c.JSON(fiber.Map{"status": "success", "data": data})
 }
 
-// CREATE
-func (h *CategoryHandler) Create(c *fiber.Ctx) error {
-	var req models.CreateCategoryRequest
+func (h *CategoryHandler) Store(c *fiber.Ctx) error {
+	var category models.Category
 
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid body"})
-	}
-
-	if err := utils.Validate.Struct(req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	category := models.Category{
-		Name: req.Name,
+	if err := c.BodyParser(&category); err != nil {
+		return c.Status(400).JSON(fiber.Map{"status": "error", "message": "invalid request"})
 	}
 
 	if err := h.service.Create(&category); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": err.Error()})
 	}
 
-	return c.JSON(category)
+	return c.Status(201).JSON(fiber.Map{
+		"status": "success",
+		"data":   category,
+	})
 }
 
-// UPDATE
 func (h *CategoryHandler) Update(c *fiber.Ctx) error {
-	id, _ := strconv.Atoi(c.Params("id"))
+	id := c.Params("id")
 
-	var req models.CreateCategoryRequest
-	c.BodyParser(&req)
-
-	category := models.Category{
-		Name: req.Name,
+	existing, err := h.service.GetByID(id)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "Category not found"})
 	}
 
-	if err := h.service.Update(id, &category); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	var req models.Category
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"status": "error", "message": "invalid request"})
 	}
 
-	return c.JSON(category)
+	existing.Name = req.Name
+
+	if err := h.service.Update(existing); err != nil {
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{"status": "success", "data": existing})
 }
 
-// DELETE
 func (h *CategoryHandler) Delete(c *fiber.Ctx) error {
-	id, _ := strconv.Atoi(c.Params("id"))
+	id := c.Params("id")
 
-	if err := h.service.Delete(id); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	data, err := h.service.GetByID(id)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "Category not found"})
 	}
 
-	return c.JSON(fiber.Map{"message": "deleted"})
+	if err := h.service.Delete(data); err != nil {
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{
+		"status":  "success",
+		"message": "Category deleted",
+	})
 }

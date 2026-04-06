@@ -1,28 +1,22 @@
 package migrations
 
 import (
-	"asset-management/models"
+	models "asset-management/model"
 	"fmt"
 
 	"gorm.io/gorm"
 )
 
-// =======================
-// MIGRATE (CREATE TABLE)
-// =======================
 func Migrate(db *gorm.DB) error {
 	fmt.Println("Running migrations...")
 
-	// 🔥 Disable FK sementara (biar aman)
 	db.Exec("SET FOREIGN_KEY_CHECKS = 0")
 
 	err := db.AutoMigrate(
-		// ✅ PARENT
-		&models.Employee{},
+		&models.User{},
 		&models.Category{},
-
-		// ✅ CHILD
 		&models.Asset{},
+		&models.Maintenance{},
 		&models.AssetLoan{},
 		&models.AssetHistory{},
 	)
@@ -31,38 +25,30 @@ func Migrate(db *gorm.DB) error {
 		return err
 	}
 
-	// 🔥 Enable lagi FK
 	db.Exec("SET FOREIGN_KEY_CHECKS = 1")
 
 	fmt.Println("Migration success")
 	return nil
 }
 
-// =======================
-// DROP ALL TABLES
-// =======================
 func DropAll(db *gorm.DB) error {
 	fmt.Println("Dropping tables...")
 
-	// 🔥 Disable FK dulu
 	db.Exec("SET FOREIGN_KEY_CHECKS = 0")
 
 	err := db.Migrator().DropTable(
-		// 🔻 CHILD dulu (biar tidak error FK)
 		&models.AssetHistory{},
 		&models.AssetLoan{},
+		&models.Maintenance{},
 		&models.Asset{},
-
-		// 🔻 PARENT
 		&models.Category{},
-		&models.Employee{},
+		&models.User{},
 	)
 
 	if err != nil {
 		return err
 	}
 
-	// 🔥 Enable lagi FK
 	db.Exec("SET FOREIGN_KEY_CHECKS = 1")
 
 	fmt.Println("Drop success")
