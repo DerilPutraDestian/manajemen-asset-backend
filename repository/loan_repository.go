@@ -32,7 +32,7 @@ func (r *AssetLoanRepository) GetAll(assetLoanCode, search string, limit, offset
 	err := query.Count(&count).
 		Preload("Asset").          // Load data Asset
 		Preload("Asset.Category"). // Load data Category MILIK Asset (Nested Preload)
-		Preload("User").           // Load data User yang meminjam
+		Preload("Employee").       // Load data Employee yang meminjam
 		Limit(limit).
 		Offset(offset).
 		Find(&assetsLoan).Error
@@ -43,21 +43,17 @@ func (r *AssetLoanRepository) GetAll(assetLoanCode, search string, limit, offset
 func (r *AssetLoanRepository) GetByID(id string) (*models.AssetLoan, error) {
 	var data models.AssetLoan
 	// Di sini juga sebaiknya tambahkan Preload("Asset.Category") agar data lengkap saat ambil detail
-	err := r.db.Preload("Asset").Preload("Asset.Category").Preload("User").First(&data, "id = ?", id).Error
+	err := r.db.Preload("Asset").Preload("Asset.Category").Preload("Employee").First(&data, "id = ?", id).Error
 	if err != nil {
 		return nil, err
 	}
 	return &data, nil
 }
 
-func (r *AssetLoanRepository) Create(l *models.AssetLoan) error {
-	if err := r.db.Create(l).Error; err != nil {
-		return err
-	}
-	// Ambil ulang agar respons JSON langsung berisi data Asset, Category, dan User
-	return r.db.Preload("Asset").Preload("Asset.Category").Preload("User").First(l, "id = ?", l.ID).Error
+func (r *AssetLoanRepository) Create(loan *models.AssetLoan) error {
+	return r.db.Omit("Asset", "Employee").Create(loan).Error
 }
 
-func (r *AssetLoanRepository) Update(l *models.AssetLoan) error {
-	return r.db.Save(l).Error
+func (r *AssetLoanRepository) Update(loan *models.AssetLoan) error {
+	return r.db.Save(loan).Error
 }

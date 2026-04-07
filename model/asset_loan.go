@@ -8,9 +8,9 @@ import (
 )
 
 type AssetLoan struct {
-	ID      string `gorm:"primaryKey;type:char(36)" json:"id"`
-	AssetID string `gorm:"type:char(36);index;not null" json:"asset_id"`
-	UserID  string `gorm:"type:char(36);index;not null" json:"user_id"`
+	ID         string `gorm:"primaryKey;type:char(36)" json:"id"`
+	AssetID    string `gorm:"type:char(36);index;not null" json:"asset_id"`
+	EmployeeID string `gorm:"type:char(36);index;not null" json:"employee_id"`
 
 	LoanDate   time.Time  `json:"loan_date"`
 	ReturnDate *time.Time `json:"return_date,omitempty"`
@@ -20,8 +20,8 @@ type AssetLoan struct {
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 
-	Asset Asset `gorm:"foreignKey:AssetID" json:"asset"`
-	User  User  `gorm:"foreignKey:UserID" json:"user"`
+	Asset    Asset    `gorm:"foreignKey:AssetID;->:false" json:"asset"`
+	Employee Employee `gorm:"foreignKey:EmployeeID;->:false" json:"employee"`
 }
 
 func (AssetLoan) TableName() string {

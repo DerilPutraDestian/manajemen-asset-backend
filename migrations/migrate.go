@@ -19,6 +19,7 @@ func Migrate(db *gorm.DB) error {
 		&models.Maintenance{},
 		&models.AssetLoan{},
 		&models.AssetHistory{},
+		&models.Employee{},
 	)
 
 	if err != nil {
@@ -43,6 +44,7 @@ func DropAll(db *gorm.DB) error {
 		&models.Asset{},
 		&models.Category{},
 		&models.User{},
+		&models.Employee{},
 	)
 
 	if err != nil {

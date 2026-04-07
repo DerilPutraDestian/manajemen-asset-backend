@@ -7,7 +7,7 @@ import (
 )
 
 type HistoryRepository interface {
-	Create(history *models.AssetHistory) error
+	Create(h *models.AssetHistory) error
 }
 
 type historyRepo struct {
@@ -18,6 +18,6 @@ func NewHistoryRepository(db *gorm.DB) HistoryRepository {
 	return &historyRepo{db}
 }
 
-func (r *historyRepo) Create(history *models.AssetHistory) error {
-	return r.db.Create(history).Error
+func (r *historyRepo) Create(h *models.AssetHistory) error {
+	return r.db.Create(h).Error
 }

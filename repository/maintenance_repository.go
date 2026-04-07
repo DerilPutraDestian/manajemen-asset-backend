@@ -32,7 +32,6 @@ func (r *MaintenanceRepository) GetByAsset(assetID string, limit, offset int) ([
 	return data, total, err
 }
 
-// Mengambil satu data maintenance untuk kebutuhan Update/Detail
 func (r *MaintenanceRepository) GetByID(id string) (*models.Maintenance, error) {
 	var m models.Maintenance
 	err := r.db.Preload("Asset").First(&m, "id = ?", id).Error

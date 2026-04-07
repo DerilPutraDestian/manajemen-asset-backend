@@ -14,6 +14,7 @@ type Asset struct {
 	CategoryID string    `gorm:"type:char(36);index" json:"category_id"`
 	Status     string    `gorm:"type:enum('available','broken','maintenance');default:'available'" json:"status"`
 	Condition  string    `gorm:"type:enum('good','fair','poor');default:'good'" json:"condition"`
+	QRCode     string    `gorm:"size:255" json:"qr_code"`
 	CreatedAt  time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt  time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 

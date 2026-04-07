@@ -36,10 +36,13 @@ func (h *LoanHandler) Index(c *fiber.Ctx) error {
 func (h *LoanHandler) Store(c *fiber.Ctx) error {
 	var loan models.AssetLoan
 
+	// Ubah pesan error agar menampilkan pesan asli dari BodyParser
 	if err := c.BodyParser(&loan); err != nil {
-		return c.Status(400).JSON(fiber.Map{"status": "error", "message": "invalid request"})
+		return c.Status(400).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Body parsing failed: " + err.Error(),
+		})
 	}
-
 	if err := h.service.CreateLoan(&loan); err != nil {
 		return c.Status(500).JSON(fiber.Map{"status": "error", "message": err.Error()})
 	}
@@ -63,7 +66,7 @@ func (h *LoanHandler) Update(c *fiber.Ctx) error {
 	}
 
 	existing.AssetID = req.AssetID
-	existing.UserID = req.UserID
+	existing.EmployeeID = req.EmployeeID
 	existing.LoanDate = req.LoanDate
 	existing.ReturnDate = req.ReturnDate
 	existing.Status = req.Status

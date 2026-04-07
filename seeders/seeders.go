@@ -22,11 +22,6 @@ func Seed(db *gorm.DB) error {
 	if err := db.Where(models.Category{Name: "Electronics"}).FirstOrCreate(&category).Error; err != nil {
 		return err
 	}
-
-	// ========================
-	// 2. USER (DENGAN BCRYPT)
-	// ========================
-	// Password harus di-hash agar bisa login nanti
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.DefaultCost)
 
 	user := models.User{
@@ -70,7 +65,6 @@ func Seed(db *gorm.DB) error {
 	// ========================
 	loan := models.AssetLoan{
 		AssetID:  assets[0].ID,
-		UserID:   user.ID,
 		LoanDate: time.Now(),
 		Status:   "borrowed",
 	}

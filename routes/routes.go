@@ -2,6 +2,7 @@ package routes
 
 import (
 	"asset-management/handlers"
+	"asset-management/middleware" // Pastikan folder middleware sudah ada
 	"asset-management/repository"
 	"asset-management/service"
 
@@ -10,68 +11,68 @@ import (
 )
 
 func SetupRoutes(app *fiber.App, db *gorm.DB) {
-	// =========================
-	// USER & AUTH
-	// =========================
+
 	userRepo := repository.NewUserRepository(db)
 	userSvc := service.NewUserService(userRepo)
 	userHandler := handlers.NewUserHandler(userSvc)
 
-	// Public Route untuk Login
-	app.Post("/api/login", userHandler.Login)
-
-	user := app.Group("/api/users")
-	user.Get("/", userHandler.Index)
-	user.Post("/", userHandler.Store)
-	user.Get("/:id", userHandler.Show)
-	user.Put("/:id", userHandler.Update)
-	user.Delete("/:id", userHandler.Delete)
-
+	// Asset & Category
 	assetRepo := repository.NewAssetRepository(db)
-	assetSvc := service.NewAssetService(assetRepo)
+	historyRepo := repository.NewHistoryRepository(db)
+	assetSvc := service.NewAssetService(assetRepo, historyRepo)
 	assetHandler := handlers.NewAssetHandler(assetSvc)
-
-	asset := app.Group("/api/assets")
-	asset.Get("/", assetHandler.Index)
-	asset.Get("/:id", assetHandler.Show)
-	asset.Post("/", assetHandler.Store)
-	asset.Put("/:id", assetHandler.Update)
-	asset.Delete("/:id", assetHandler.Delete)
 
 	catRepo := repository.NewCategoryRepository(db)
 	catSvc := service.NewCategoryService(catRepo)
 	catHandler := handlers.NewCategoryHandler(catSvc)
 
-	category := app.Group("/api/categories")
-	category.Get("/", catHandler.Index)
-	category.Get("/:id", catHandler.Show)
-	category.Post("/", catHandler.Store)
-	category.Put("/:id", catHandler.Update)
-	category.Delete("/:id", catHandler.Delete)
+	// Employee (DATA BARU)
+	empRepo := repository.NewEmployeeRepository(db)
+	empSvc := service.NewEmployeeService(empRepo)
+	empHandler := handlers.NewEmployeeHandler(empSvc)
 
-	// =========================
-	// LOAN (PEMINJAMAN)
-	// =========================
+	// Loan & Maintenance
 	loanRepo := repository.NewAssetLoanRepository(db)
 	loanSvc := service.NewAssetLoanService(loanRepo)
 	loanHandler := handlers.NewLoanHandler(loanSvc)
 
-	loan := app.Group("/api/loans")
-	loan.Get("/", loanHandler.Index)
-	loan.Post("/", loanHandler.Store)
-	loan.Put("/:id", loanHandler.Update)
-
-	// =========================
-	// MAINTENANCE
-	// =========================
 	mtRepo := repository.NewMaintenanceRepository(db)
 	mtSvc := service.NewMaintenanceService(mtRepo)
 	mtHandler := handlers.NewMaintenanceHandler(mtSvc)
 
-	maintenance := app.Group("/api/maintenances")
-	maintenance.Get("/", mtHandler.Index)
-	maintenance.Post("/", mtHandler.Store)
-	maintenance.Get("/:id", mtHandler.Update) // Bisa digunakan untuk detail
-	maintenance.Put("/:id", mtHandler.Update)
-	// Delete DIHAPUS sesuai prinsip Audit Trail (Histori Permanen)
+	api := app.Group("/api")
+	api.Post("/login", userHandler.Login)
+	api.Use(middleware.JWTMiddleware())
+
+	employees := api.Group("/employees")
+	employees.Get("/", empHandler.Index)
+	employees.Post("/", empHandler.Store)
+
+	// --- ASSETS ---
+	assets := api.Group("/assets")
+	assets.Get("/", assetHandler.Index)
+	assets.Get("/:id", assetHandler.Show)
+	assets.Post("/", assetHandler.Store)    // Biasanya Admin
+	assets.Put("/:id", assetHandler.Update) // Biasanya Admin
+	assets.Delete("/:id", assetHandler.Delete)
+
+	// --- CATEGORIES ---
+	categories := api.Group("/categories")
+	categories.Get("/", catHandler.Index)
+	categories.Get("/:id", catHandler.Show)
+	categories.Post("/", catHandler.Store)
+	categories.Put("/:id", catHandler.Update)
+	categories.Delete("/:id", catHandler.Delete)
+
+	// --- LOANS (PEMINJAMAN) ---
+	loans := api.Group("/loans")
+	loans.Get("/", loanHandler.Index)
+	loans.Post("/", loanHandler.Store)
+	loans.Put("/:id", loanHandler.Update) // Digunakan untuk Return Asset
+
+	// --- MAINTENANCE ---
+	maintenances := api.Group("/maintenances")
+	maintenances.Get("/", mtHandler.Index)
+	maintenances.Post("/", mtHandler.Store)
+	maintenances.Put("/:id", mtHandler.Update)
 }
