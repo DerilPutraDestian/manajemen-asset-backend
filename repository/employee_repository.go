@@ -41,7 +41,6 @@ func (r *EmployeeRepository) Create(e *models.Employee) error {
 }
 
 func (r *EmployeeRepository) Update(e *models.Employee) error {
-	// Save akan mengupdate semua field berdasarkan Primary Key
 	return r.db.Save(e).Error
 }
 

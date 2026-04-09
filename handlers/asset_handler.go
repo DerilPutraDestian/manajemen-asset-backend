@@ -93,7 +93,7 @@ func (h *AssetHandler) Delete(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "Asset not found"})
 	}
 
-	if err := h.service.DeleteAsset(asset); err != nil {
+	if err := h.service.Delete(asset); err != nil {
 		return c.Status(500).JSON(fiber.Map{"status": "error", "message": err.Error()})
 	}
 
