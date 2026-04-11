@@ -13,23 +13,29 @@ type MaintenanceRepository struct {
 func NewMaintenanceRepository(db *gorm.DB) *MaintenanceRepository {
 	return &MaintenanceRepository{db: db}
 }
-
-// Menampilkan histori maintenance berdasarkan Asset tertentu
-func (r *MaintenanceRepository) GetByAsset(assetID string, limit, offset int) ([]models.Maintenance, int64, error) {
+func (r *MaintenanceRepository) GetAll(limit, offset int) ([]models.Maintenance, int64, error) {
 	var data []models.Maintenance
 	var total int64
 
-	query := r.db.Model(&models.Maintenance{}).Where("asset_id = ?", assetID)
+	db := r.db.Model(&models.Maintenance{})
 
-	err := query.Count(&total).
-		Preload("Asset").
-		Preload("User"). // Asumsi ReportedBy merujuk ke tabel User
+	// Hitung total data untuk keperluan pagination di frontend
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Ambil data dengan Preload Asset
+	err := db.Preload("Asset").
 		Limit(limit).
 		Offset(offset).
-		Order("created_at DESC"). // Histori terbaru di atas
+		Order("created_at DESC").
 		Find(&data).Error
 
 	return data, total, err
+}
+func (r *MaintenanceRepository) Create(m *models.Maintenance) error {
+	// Omit Asset agar tidak mencoba insert ulang data master Asset
+	return r.db.Omit("Asset").Create(m).Error
 }
 
 func (r *MaintenanceRepository) GetByID(id string) (*models.Maintenance, error) {
@@ -38,12 +44,14 @@ func (r *MaintenanceRepository) GetByID(id string) (*models.Maintenance, error) 
 	return &m, err
 }
 
-func (r *MaintenanceRepository) Create(m *models.Maintenance) error {
-	return r.db.Create(m).Error
+func (r *MaintenanceRepository) GetByAssetID(assetID string) ([]models.Maintenance, error) {
+	var data []models.Maintenance
+	err := r.db.Where("asset_id = ?", assetID).Order("created_at DESC").Find(&data).Error
+	return data, err
 }
 
 func (r *MaintenanceRepository) Update(m *models.Maintenance) error {
-	// Menggunakan .Select untuk menentukan kolom mana saja yang BOLEH diubah.
-	// Kolom asset_id dan reported_by TIDAK dimasukkan agar tidak kena cek Foreign Key.
-	return r.db.Model(m).Select("description", "status", "start_date", "end_date", "updated_at").Updates(m).Error
+	return r.db.Model(m).
+		Select("IssueDescription", "MaintenanceStatus", "StartDate", "EndDate", "UpdatedAt").
+		Updates(m).Error
 }

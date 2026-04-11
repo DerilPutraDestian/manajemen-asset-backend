@@ -55,5 +55,5 @@ func (r *AssetLoanRepository) Create(loan *models.AssetLoan) error {
 }
 
 func (r *AssetLoanRepository) Update(loan *models.AssetLoan) error {
-	return r.db.Save(loan).Error
+	return r.db.Model(loan).Omit("Asset", "Employee").Updates(loan).Error
 }

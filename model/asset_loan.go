@@ -20,8 +20,8 @@ type AssetLoan struct {
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 
-	Asset    Asset    `gorm:"foreignKey:AssetID;->:false" json:"asset"`
-	Employee Employee `gorm:"foreignKey:EmployeeID;->:false" json:"employee"`
+	Asset    Asset    `gorm:"foreignKey:AssetID" json:"asset"`
+	Employee Employee `gorm:"foreignKey:EmployeeID" json:"employee"`
 }
 
 func (AssetLoan) TableName() string {
